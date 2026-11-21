@@ -37,6 +37,7 @@ EVENT_DATES = [  # (UTC date, relative orbit), chronological
 
 # Default detection parameters (varied in the sensitivity notebook)
 DEFAULT_PARAMS = {
+    "pol": "VH",          # polarisation used for detection (VV tested in sensitivity)
     "diff_db": -3.0,      # event VH minus dry baseline VH must be below this
     "vh_db": "otsu",      # absolute VH water threshold: number (dB) or "otsu" (automatic, per scene)
     "vh_fallback_db": -20.0,  # used if Otsu fails or is implausible

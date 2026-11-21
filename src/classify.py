@@ -104,9 +104,12 @@ def remove_small(mask: np.ndarray, min_px: int) -> np.ndarray:
 
 
 def classify(s1: dict, params: dict | None = None, st: dict | None = None) -> tuple[np.ndarray, dict]:
+    """Classify one acquisition. params override config.DEFAULT_PARAMS; 'pol' selects VH (default)
+    or VV — thresholds named vh_* then apply to the chosen polarisation."""
     p = {**config.DEFAULT_PARAMS, **(params or {})}
     st = st or static()
-    vh, vh0 = s1["VH"], s1["VH0"]
+    pol = p.get("pol", "VH")
+    vh, vh0 = s1[pol], s1[pol + "0"]
     observed = np.isfinite(vh) & np.isfinite(vh0) & st["district"]
     hand_ok = np.nan_to_num(st["hand"], nan=999) < p["hand_m"]
 
@@ -114,7 +117,9 @@ def classify(s1: dict, params: dict | None = None, st: dict | None = None) -> tu
     if p["vh_db"] == "otsu":
         t = otsu_vh(vh, hand_ok, observed)
         info["vh_otsu"] = t
-        vh_t = t if -26 < t < -15 else p["vh_fallback_db"]
+        lo, hi = (-26, -15) if pol == "VH" else (-22, -10)  # plausible open-water ranges
+        fallback = p["vh_fallback_db"] if pol == "VH" else -15.0
+        vh_t = t if lo < t < hi else fallback
     else:
         vh_t = float(p["vh_db"])
     info["vh_threshold"] = vh_t
@@ -131,6 +136,34 @@ def classify(s1: dict, params: dict | None = None, st: dict | None = None) -> tu
     classes[~observed] = 255
     info.update({k: v for k, v in p.items() if k != "vh_db"})
     return classes, info
+
+
+# --------------------------------------------------------------------------- evaluation helpers
+def agreement(classes: np.ndarray, ref: np.ndarray, region: np.ndarray | None = None) -> dict:
+    """Pixel agreement of our flood class (1) with a boolean reference flood mask, on observed pixels."""
+    ok = classes != 255
+    if region is not None:
+        ok &= region
+    ours, refm = (classes == 1) & ok, ref & ok
+    tp = np.count_nonzero(ours & refm)
+    fp = np.count_nonzero(ours & ~refm)
+    fn = np.count_nonzero(~ours & refm)
+    tn = np.count_nonzero(ok) - tp - fp - fn
+    n = tp + fp + fn + tn
+    po = (tp + tn) / n
+    pe = ((tp + fp) * (tp + fn) + (fn + tn) * (fp + tn)) / n**2
+    return {"ours_km2": (tp + fp) * PIX_KM2, "ref_km2": (tp + fn) * PIX_KM2,
+            "precision": tp / max(tp + fp, 1), "recall": tp / max(tp + fn, 1),
+            "f1": 2 * tp / max(2 * tp + fp + fn, 1), "iou": tp / max(tp + fp + fn, 1),
+            "overall_accuracy": po, "kappa": (po - pe) / (1 - pe) if pe < 1 else np.nan}
+
+
+def built_exposed_km2(classes: np.ndarray, built: np.ndarray, distances=(30, 50, 100)) -> dict:
+    """Built-up area (km2) within each distance (m) of flood pixels, on observed pixels."""
+    flood = classes == 1
+    d = ndimage.distance_transform_edt(~flood) * 10
+    b = built & (classes != 255)
+    return {f"exposed_{m}m_km2": float(np.count_nonzero(b & (d <= m)) * PIX_KM2) for m in distances}
 
 
 # --------------------------------------------------------------------------- statistics / io
