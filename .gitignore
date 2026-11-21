@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Large / re-downloadable data (fetch with: python src/download_data.py)
+data/raw/
+data/processed/
+
+# Large outputs (GeoTIFFs); keep tables and figures in git
+outputs/rasters/
+
+# QGIS temp files
+*.qgz~
+*.qgs~
+
+# Never commit credentials
+.config/
+credentials
+*.json.key
+.env
+
+# Copyrighted papers: keep locally, do not redistribute
+Comparative-analysis-of-classification-techniques-for-flood-mapping-using-Sentinel-1-SAR.pdf
+Sentinel-1-based flood mapping - a fully automated processing chain.pdf
+docs/papers/
