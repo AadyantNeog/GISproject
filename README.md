@@ -22,7 +22,13 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python src\download_data.py
 .venv\Scripts\earthengine authenticate      # one-time, opens a browser sign-in
+.venv\Scripts\python -u src\fetch_stacks.py   # Earth Engine preprocessing -> local stacks (~1 h)
 ```
+
+Pipeline: Earth Engine does Sentinel-1 preprocessing (border mask, Lee filter, same-track dry-season
+median baseline) and supplies HAND / slope (MERIT), JRC water and WorldCover; `src/fetch_stacks.py`
+downloads these on one 10 m UTM 46N grid. Classification, thresholds and statistics run locally in
+`src/classify.py`, which makes threshold sweeps fast.
 
 Then set your Google Cloud project ID (the one registered for Earth Engine) in `src/config.py`
 and open the notebooks with the "Python (GISproject)" kernel.
