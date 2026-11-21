@@ -25,3 +25,9 @@ credentials
 Comparative-analysis-of-classification-techniques-for-flood-mapping-using-Sentinel-1-SAR.pdf
 Sentinel-1-based flood mapping - a fully automated processing chain.pdf
 docs/papers/
+
+# LaTeX build files
+docs/report/*.aux
+docs/report/*.log
+docs/report/*.toc
+docs/report/*.out
