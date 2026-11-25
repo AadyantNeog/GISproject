@@ -196,9 +196,7 @@ with rasterio.open(config.OUT_RASTERS / "flood_frequency_june2022.tif", "w", **p
 print("flooded on >=1 date:", round(any_flood.sum() * C.PIX_KM2, 1), "km2;",
       "on >=3 dates:", round((freq >= 3).sum() * C.PIX_KM2, 1), "km2")"""),
         ("md", "## Exposure by date"),
-        ("code", """def dist_to_flood_m(flood):
-    \"\"\"Euclidean distance (m) from every pixel to the nearest flood pixel.\"\"\"
-    return (ndimage.distance_transform_edt(~flood) * 10).astype(np.float32)
+        ("code", """dist_to_flood_m = C.distance_to_flood_m  # metres to nearest flood pixel; +inf if no flood
 
 # settlement clusters = 8-connected patches of built-up pixels
 clusters, n_clusters = ndimage.label(built, structure=np.ones((3, 3), bool))
@@ -247,9 +245,11 @@ by_sub.pivot(index="subdistrict", columns="scenario", values="exposed_km2")"""),
         ("md", "## 1 km grid summary (for mapping where exposure concentrates)"),
         ("code", """prof = C.profile(); t = prof["transform"]; H, W = prof["height"], prof["width"]
 k = 100  # 100 x 10 m = 1 km cells
-Hc, Wc = H // k, W // k
+Hc, Wc = -(-H // k), -(-W // k)  # ceil: keep partial cells at the east/south edges
 def block_sum(a):
-    return a[:Hc * k, :Wc * k].reshape(Hc, k, Wc, k).sum(axis=(1, 3)) * C.PIX_KM2
+    padded = np.zeros((Hc * k, Wc * k), dtype=np.float64)
+    padded[:H, :W] = a
+    return padded.reshape(Hc, k, Wc, k).sum(axis=(1, 3)) * C.PIX_KM2
 
 exp_any = block_sum(built & (obs > 0) & (d_any <= MAIN_M))
 built_c = block_sum(built)
@@ -260,7 +260,8 @@ cells = []
 for i in range(Hc):
     for j in range(Wc):
         x0 = t.c + j * k * t.a; y1 = t.f + i * k * t.e
-        cells.append(box(x0, y1 + k * t.e, x0 + k * t.a, y1))
+        x1 = min(x0 + k * t.a, t.c + W * t.a); y0 = max(y1 + k * t.e, t.f + H * t.e)  # clip edge cells to grid
+        cells.append(box(x0, y0, x1, y1))
 grid = gpd.GeoDataFrame({"built_km2": built_c.ravel(), "exposed_any_km2": exp_any.ravel(),
                          "exposed_30jun_km2": exp_peak.ravel(), "flood_any_km2": flood_any_c.ravel()},
                         geometry=cells, crs=prof["crs"])
@@ -346,13 +347,15 @@ for (date, orb), ref_name in DATES.items():
     _, info = C.classify(s1, st=st)              # default run -> Otsu value for this date
     otsu_t = info["vh_threshold"]
     for param, values in SWEEPS.items():
+        if param == "vh_db":                     # include the exact Otsu value as the default row
+            values = sorted(set(values) | {round(otsu_t, 4)})
         for v in values:
             prm = {"vh_db": otsu_t, param: v}
             if param == "pol" and v == "VV":
                 prm["vh_db"] = "otsu"           # VV needs its own automatic threshold
             cl, inf = C.classify(s1, prm, st=st)
             r = {"date": date, "track": orb, "param": param, "value": v,
-                 "is_default": (v == DEFAULTS.get(param)) or (param == "vh_db" and abs(v - otsu_t) < 0.5),
+                 "is_default": (v == round(otsu_t, 4)) if param == "vh_db" else (v == DEFAULTS.get(param)),
                  "vh_threshold": inf["vh_threshold"], "flood_km2": C.areas_km2(cl)["flood_km2"],
                  **C.built_exposed_km2(cl, built, (50,))}
             if ref_name:
@@ -535,21 +538,22 @@ subcmp.to_csv(config.OUT_TABLES / "validation_subdistrict.csv", index=False)
 subcmp.pivot_table(index="subdistrict", columns=["reference", "ours"], values=["ours_km2", "ref_km2"]).round(1)"""),
         ("code", """subcmp.groupby(["reference", "ours"]).spearman_rho_all.first().round(2)"""),
         ("md", "## 5 · Published estimates for the same district and dates\n\n"
-               "From Irukumati et al. (2025), Table 3 and text. The NRSC 30 June value is read from the table "
-               "layout (its column is split in the PDF); treat it with care."),
+               "From Irukumati et al. (2025), Table 3 and text. The NRSC 30 June value (597.32 km²) is "
+               "confirmed in the paper's discussion text. For Random Forest VV on 18 June the paper gives "
+               "395.56 km² in the text (p. 11) but 295.56 km² in Table 3 (p. 13); the text value is used here."),
         ("code", """areas = pd.read_csv(config.OUT_TABLES / "flood_area_by_date.csv")
 ours18 = areas.query("date == '2022-06-18'").flood_km2.iloc[0]
 ours30 = areas.query("date == '2022-06-30'").flood_km2.iloc[0]
 pub = pd.DataFrame([
-    ("NRSC reference (as cited by Irukumati et al.)", 413.28, 597.32),
-    ("Irukumati et al.: Random Forest, VV", 395.56, 565.27),
-    ("Irukumati et al.: Random Forest, VH", 383.19, 583.21),
-    ("Irukumati et al.: Random Forest, VV+VH", 400.29, 592.12),
-    ("Irukumati et al.: K-means, VV", 413.28, 613.23),
-    ("Irukumati et al.: K-means, VH", 389.24, 592.64),
-    ("Irukumati et al.: K-means, VV+VH", 401.78, 551.93),
-    ("This study (VH change detection, Otsu)", ours18, ours30),
-], columns=["source", "18 Jun 2022 (km2)", "30 Jun 2022 (km2)"])
+    ("NRSC reference (as cited by Irukumati et al.)", 413.28, 597.32, "Table 3; 30 Jun also in discussion text"),
+    ("Irukumati et al.: Random Forest, VV", 395.56, 565.27, "18 Jun from text p.11; Table 3 gives 295.56"),
+    ("Irukumati et al.: Random Forest, VH", 383.19, 583.21, ""),
+    ("Irukumati et al.: Random Forest, VV+VH", 400.29, 592.12, ""),
+    ("Irukumati et al.: K-means, VV", 413.28, 613.23, ""),
+    ("Irukumati et al.: K-means, VH", 389.24, 592.64, ""),
+    ("Irukumati et al.: K-means, VV+VH", 401.78, 551.93, ""),
+    ("This study (VH change detection, Otsu)", ours18, ours30, ""),
+], columns=["source", "18 Jun 2022 (km2)", "30 Jun 2022 (km2)", "note"])
 pub.to_csv(config.OUT_TABLES / "validation_published_areas.csv", index=False)
 pub.round(1)"""),
         ("md", "## 6 · May flood wave and baseline choice\n\n"

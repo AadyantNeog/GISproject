@@ -45,7 +45,8 @@ EXPO = paletted([(0, "#ffffff", 0, "not built-up"), (1, "#8c8c8c", 255, "built-u
                  (2, "#fdae61", 255, "built-up 50-100 m from flood"), (3, "#d7301f", 255, "built-up <= 50 m from flood"),
                  (255, "#ffffff", 0, "outside district")])
 GRID = graduated_fill("exposed_any_km2", [
-    (0, 0.0001, "#f4f2ee", "0"), (0.0001, 0.005, "#fdd49e", "< 0.5 ha"), (0.005, 0.01, "#fc8d59", "0.5-1 ha"),
+    # "0" range ends at half a 10 m pixel (0.00005 km2) so one exposed pixel (0.0001 km2) is never labelled 0
+    (0, 0.00005, "#f4f2ee", "0"), (0.00005, 0.005, "#fdd49e", "< 0.5 ha"), (0.005, 0.01, "#fc8d59", "0.5-1 ha"),
     (0.01, 0.02, "#d7301f", "1-2 ha"), (0.02, 1, "#7f0000", "> 2 ha")])
 
 STYLE_FILES = {

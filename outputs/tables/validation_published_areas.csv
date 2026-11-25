@@ -1,9 +1,9 @@
-source,18 Jun 2022 (km2),30 Jun 2022 (km2)
-NRSC reference (as cited by Irukumati et al.),413.28,597.32
-"Irukumati et al.: Random Forest, VV",395.56,565.27
-"Irukumati et al.: Random Forest, VH",383.19,583.21
-"Irukumati et al.: Random Forest, VV+VH",400.29,592.12
-"Irukumati et al.: K-means, VV",413.28,613.23
-"Irukumati et al.: K-means, VH",389.24,592.64
-"Irukumati et al.: K-means, VV+VH",401.78,551.93
-"This study (VH change detection, Otsu)",503.4,600.1
+source,18 Jun 2022 (km2),30 Jun 2022 (km2),note
+NRSC reference (as cited by Irukumati et al.),413.28,597.32,Table 3; 30 Jun also in discussion text
+"Irukumati et al.: Random Forest, VV",395.56,565.27,18 Jun from text p.11; Table 3 gives 295.56
+"Irukumati et al.: Random Forest, VH",383.19,583.21,
+"Irukumati et al.: Random Forest, VV+VH",400.29,592.12,
+"Irukumati et al.: K-means, VV",413.28,613.23,
+"Irukumati et al.: K-means, VH",389.24,592.64,
+"Irukumati et al.: K-means, VV+VH",401.78,551.93,
+"This study (VH change detection, Otsu)",503.4,600.1,

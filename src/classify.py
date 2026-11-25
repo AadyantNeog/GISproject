@@ -89,7 +89,11 @@ def otsu_vh(vh: np.ndarray, hand_ok: np.ndarray, region: np.ndarray, step: int =
     edges = canny(filled, sigma=1.5, low_threshold=1.0, high_threshold=2.5, mask=ok)
     near = ndimage.binary_dilation(edges, iterations=3) & ok
     sample = v[near]
-    return float(threshold_otsu(sample[(sample > -35) & (sample < 0)]))
+    sample = sample[(sample > -35) & (sample < 0)]
+    # No edges (e.g. a uniform scene) or a single value: no split exists -> NaN, caller uses fallback
+    if sample.size < 2 or np.ptp(sample) == 0:
+        return float("nan")
+    return float(threshold_otsu(sample))
 
 
 # --------------------------------------------------------------------------- classification
@@ -119,7 +123,7 @@ def classify(s1: dict, params: dict | None = None, st: dict | None = None) -> tu
         info["vh_otsu"] = t
         lo, hi = (-26, -15) if pol == "VH" else (-22, -10)  # plausible open-water ranges
         fallback = p["vh_fallback_db"] if pol == "VH" else -15.0
-        vh_t = t if lo < t < hi else fallback
+        vh_t = t if np.isfinite(t) and lo < t < hi else fallback
     else:
         vh_t = float(p["vh_db"])
     info["vh_threshold"] = vh_t
@@ -158,10 +162,17 @@ def agreement(classes: np.ndarray, ref: np.ndarray, region: np.ndarray | None = 
             "overall_accuracy": po, "kappa": (po - pe) / (1 - pe) if pe < 1 else np.nan}
 
 
+def distance_to_flood_m(flood: np.ndarray) -> np.ndarray:
+    """Euclidean distance (m) from each pixel to the nearest flood pixel; +inf everywhere if there is
+    no flood (scipy's transform would otherwise measure to the array edge)."""
+    if not flood.any():
+        return np.full(flood.shape, np.inf, np.float32)
+    return (ndimage.distance_transform_edt(~flood) * 10).astype(np.float32)
+
+
 def built_exposed_km2(classes: np.ndarray, built: np.ndarray, distances=(30, 50, 100)) -> dict:
     """Built-up area (km2) within each distance (m) of flood pixels, on observed pixels."""
-    flood = classes == 1
-    d = ndimage.distance_transform_edt(~flood) * 10
+    d = distance_to_flood_m(classes == 1)
     b = built & (classes != 255)
     return {f"exposed_{m}m_km2": float(np.count_nonzero(b & (d <= m)) * PIX_KM2) for m in distances}
 

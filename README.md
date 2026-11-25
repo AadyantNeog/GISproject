@@ -12,7 +12,7 @@ questions, validation, limitations and an index of every output.
 * Flooded area: 124–143 km² on 4–6 June → 503 km² on 18 June → 600 km² on 30 June; 766 km² flooded on at least one date.
 * Built-up land within 50 m of flood water: 7.2 km² (11 % of the district's built-up) on any June date; highest shares in Raha (25 %) and Kampur (23 %).
 * Threshold sensitivity: 18 June area 423–575 km² over common threshold choices; the VH-drop threshold matters most.
-* Agreement: 30 June area within 1 % of the NRSC figure; recall 0.78 vs the MBRSC map from the same scene; flooding under trees is missed (C-band).
+* Agreement: 30 June area within 1 % of the NRSC figure; recall 0.78 vs the MBRSC map from the same scene; half of the flooding seen only by L-band ALOS-2 is under trees, consistent with C-band missing water beneath canopy.
 
 ## Layout
 

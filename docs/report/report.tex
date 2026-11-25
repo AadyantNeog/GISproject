@@ -69,10 +69,10 @@ flooded on at least one date. Because SAR cannot detect water among buildings, s
 was measured as ESA WorldCover built-up land within a distance of flood water: \SI{7.2}{\kmsq}
 (11\% of the district's built-up area) lay within \SI{50}{m} of flooding on some June date, with the
 highest shares in Raha (25\%) and Kampur (23\%). The flooded area was most sensitive to the
-backscatter-drop threshold (\SIrange{423}{575}{\kmsq} on 18 June over common threshold choices) and
+two backscatter thresholds (\SIrange{423}{575}{\kmsq} on 18 June over common choices of both) and
 insensitive to terrain masks. The 30 June area agrees with the NRSC figure within 1\%; pixel
-agreement with independent rapid-mapping products is moderate, and the comparison with an
-L-band ALOS-2 map shows that flooding under tree canopy is missed by C-band Sentinel-1.
+agreement with rapid-mapping reference products is moderate, and half of the flooding that only an
+L-band ALOS-2 map shows lies under tree cover, consistent with C-band Sentinel-1 missing water beneath canopy.
 
 \noindent\textbf{Keywords:} flood inundation; Sentinel-1 SAR; change detection; settlement exposure; Nagaon; GIS
 
@@ -134,7 +134,7 @@ including village homestead gardens (39\%); built-up land covers \SI{63.9}{\kmsq
 \centering
 \includegraphics[width=\linewidth]{map_study_area.png}
 \caption{Study area: Nagaon district (June 2022 extent) and census sub-districts, shaded by height above
-nearest drainage (MERIT Hydro). Permanent water (JRC, $\geq$10 months per year) is shown in dark blue;
+nearest drainage (MERIT Hydro). Permanent water (JRC, water in $\geq$10 months of 2021) is shown in dark blue;
 the Brahmaputra lies along the northern boundary.}
 \label{fig:study}
 \end{figure}
@@ -149,7 +149,7 @@ the Brahmaputra lies along the northern boundary.}
 \toprule
 Dataset & Resolution & Use\\
 \midrule
-Sentinel-1A IW GRD (VV, VH), via Google Earth Engine & \SI{10}{m} & flood detection (6 event dates, 17 baseline scenes)\\
+Sentinel-1A IW GRD (VV, VH), via Google Earth Engine & \SI{10}{m} & flood detection (6 event dates, 16 baseline scenes)\\
 MERIT Hydro: HAND and DEM & \SI{90}{m} & terrain exclusions (HAND, slope)\\
 JRC Global Surface Water v1.4 (1984--2021) & \SI{30}{m} & permanent and historical water\\
 ESA WorldCover 2021 v200 & \SI{10}{m} & built-up land (class 50), land cover\\
@@ -177,7 +177,7 @@ on the following morning, and the ascending passes at about 18:00~IST on the sam
 Track & Pass & June 2022 event dates (UTC) & District coverage & Baseline scenes\\
 \midrule
 77 & Descending & 6, 18, 30 June & 100\% & 8\\
-41 & Ascending & 4, 16, 28 June & 93\% & 9\\
+41 & Ascending & 4, 16, 28 June & 93\% & 8\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -264,7 +264,9 @@ Following \cite{twele}, likely false positives were then removed:
 building heights make the SRTM surface rough, and more than 10\% of the lowest-lying land (HAND $<$ \SI{5}{m})
 had SRTM slopes above \ang{5}, so the mask would have removed 12.7\% of flood-prone land. With the MERIT DEM,
 which has vegetation bias removed, this fell to 1.1\%.
-\item \textbf{Permanent water}: JRC seasonality $\geq$ 10 months per year (classed separately).
+\item \textbf{Permanent water}: JRC seasonality $\geq$ 10 months (classed separately). In GSW v1.4 the seasonality band
+records the number of months with water in 2021, the last year of the record, so this is water that was present for at
+least 10 months of 2021.
 \item \textbf{Minimum mapping unit}: connected flood patches smaller than 8 pixels (\SI{800}{m^2}).
 \end{itemize}
 Each map has the classes \emph{not flooded}, \emph{flood}, \emph{permanent water} and \emph{not observed}.
@@ -285,7 +287,7 @@ confirmed damage or affected population.
 Each parameter was varied in turn around the default (the Otsu value held fixed) on three dates:
 16 June (track 41), 18 June and 30 June (track 77). Parameters: VH-drop threshold ($-1$ to $-6$ dB),
 absolute VH threshold ($-17$ to $-24$ dB), HAND (5--30 m and off), slope (\ang{2}--\ang{10} and off),
-permanent-water definition (JRC $\geq$1 to 12 months, or none), minimum patch (1--100 px) and polarisation
+permanent-water definition (JRC 2021 seasonality $\geq$1 to 12 months, or none), minimum patch (1--100 px) and polarisation
 (VH vs VV). A joint grid of the two main thresholds was also run for 18 June.
 
 The maps were compared with the MBRSC map from the same 16 June scene and with the EOS-RS ALOS-2 map of
@@ -293,6 +295,13 @@ The maps were compared with the MBRSC map from the same 16 June scene and with t
 recall, F1, overall accuracy and Cohen's $\kappa$ were computed on all observed pixels, flood fractions were
 compared at 100\,m, 500\,m and 1\,km, and disagreements were broken down by land cover. Total areas were
 compared with the NRSC figures and classifier results reported by \cite{irukumati}.
+
+The reference layers contain only flood polygons, without the footprint each product actually assessed. They were
+therefore rasterised with everything outside the polygons treated as dry, which assumes that each product covered the
+whole district. Where a product did not assess an area, our detections there count as false positives and our dry
+pixels as true negatives. The MBRSC polygons extend only to \ang{93.26}\,E, short of the district's eastern edge
+(\ang{93.32}\,E), so its coverage of the eastern tip is uncertain. Precision, F1, overall accuracy and $\kappa$ should
+be read with this assumption; recall (the share of reference flooding we also map) does not depend on it.
 
 % ------------------------------------------------------------------ 5
 \section{Results}
@@ -443,8 +452,10 @@ Table~\ref{tab:sens} and Figure~\ref{fig:sens} summarise the one-at-a-time exper
 by far the largest effect, followed by the absolute VH threshold. Over commonly used values of the two
 (drop $-2$ to $-4$ dB, VH $-19$ to $-22$ dB; Figure~\ref{fig:joint}) the 18 June flooded area ranges from
 \SI{423}{} to \SI{575}{\kmsq} ($-16\%$ to $+14\%$ of the default \SI{503}{\kmsq}). The permanent-water definition
-matters because a large part of the floodplain has held water in some past months: excluding every pixel that JRC
-has ever seen wet removes about \SI{90}{\kmsq} on 18 June. The terrain masks change the result by less than 1\%,
+also matters: excluding every pixel that held water in any month of 2021 (JRC seasonality $\geq$ 1) removes about
+\SI{92}{\kmsq} on 18 June. This test uses 2021 only. A further \SI{161.8}{\kmsq} of the default 18 June flood lies on
+land that JRC observed as water in earlier years but not in 2021, so a mask based on the full 1984--2021 record would
+remove considerably more. The terrain masks change the result by less than 1\%,
 as expected in a flat floodplain. VV detects about 10\% less flooding than VH. Exposure follows flood area but is
 proportionally more sensitive, especially to the minimum patch size, because small flood patches next to houses
 are the first to be removed.
@@ -458,8 +469,8 @@ are the first to be removed.
 Setting & Range tested & Area range (\% of default) & Note\\
 \midrule
 VH-drop threshold & $-1$ to $-6$ dB & 43--73\% & 18 Jun: 358--574 \kmsq\\
-Absolute VH threshold & $-17$ to $-24$ dB & 32--37\% & 18 Jun: 373--534 \kmsq\\
-Permanent-water definition & JRC $\geq$ 1--12 months, none & 16--19\% & strictest removes $\sim$90 \kmsq{} on 18 Jun\\
+Absolute VH threshold & $-17$ to $-24$ dB & 32--36\% & 18 Jun: 373--534 \kmsq\\
+Permanent-water definition & JRC 2021 seasonality $\geq$ 1--12 months, none & 16--19\% & strictest removes $\sim$92 \kmsq{} on 18 Jun\\
 Minimum patch & 1--100 px & 6--11\% & exposure 2.5--4.5 \kmsq{} on 18 Jun\\
 Polarisation & VH, VV & 7--10\% & VV Otsu threshold $-13.1$ dB\\
 HAND, slope & 5 m--off, \ang{2}--off & $<$ 1\% & flat floodplain\\
@@ -517,8 +528,10 @@ totals are ranked consistently (Spearman $\rho$ = 0.82 against MBRSC and 0.86 ag
 
 The disagreements are systematic. Of the \SI{431}{\kmsq} mapped only by us on 18 June, \SI{378}{\kmsq} is cropland
 and 46\% lies where JRC has recorded water before, consistent with waterlogged or flooded paddy and seasonal wetlands.
-Of the \SI{71}{\kmsq} mapped only in the ALOS-2 product, \SI{36}{\kmsq} is tree cover: L-band radar penetrates the
-canopy and detects water beneath it, whereas C-band Sentinel-1 does not.
+Of the \SI{71}{\kmsq} mapped only in the ALOS-2 product, \SI{36}{\kmsq} is tree cover. This is consistent with
+L-band radar detecting water beneath the canopy where C-band Sentinel-1 cannot, but the comparison does not isolate
+that cause: flooding may also have changed in the four days between the scenes, and the two products use different
+detection methods.
 
 \begin{table}[H]
 \centering\small
@@ -528,18 +541,21 @@ canopy and detects water beneath it, whereas C-band Sentinel-1 does not.
 \toprule
 Source & 18 June 2022 (\kmsq) & 30 June 2022 (\kmsq)\\
 \midrule
-NRSC reference, as cited by \cite{irukumati} & 413.3 & 597.3$^{*}$\\
-Random Forest, VV / VH / VV+VH \cite{irukumati} & 395.6 / 383.2 / 400.3 & 565.3 / 583.2 / 592.1\\
+NRSC reference, as cited by \cite{irukumati} & 413.3 & 597.3\\
+Random Forest, VV / VH / VV+VH \cite{irukumati} & 395.6$^{*}$ / 383.2 / 400.3 & 565.3 / 583.2 / 592.1\\
 K-means, VV / VH / VV+VH \cite{irukumati} & 413.3 / 389.2 / 401.8 & 613.2 / 592.6 / 551.9\\
 \textbf{This study} (VH change detection) & \textbf{503.4} & \textbf{600.1}\\
 \bottomrule
 \end{tabular}\\[2pt]
-{\footnotesize $^{*}$ Read from a table column that is split across the PDF layout of the source.}
+{\footnotesize $^{*}$ The source gives 395.56\,\kmsq{} in its text (p.\,11) but 295.56\,\kmsq{} in its Table 3 (p.\,13); the text value is used.}
 \end{table}
 
-The 30 June area agrees with the NRSC figure to within 1\% and lies inside the spread of the classifiers tested by
-\cite{irukumati} (Table~\ref{tab:pub}). On 18 June our estimate is about 22\% higher than NRSC; this difference is
-within the threshold-sensitivity range (for example, a $-22$ dB VH threshold gives \SI{444}{\kmsq}). The rapid-mapping
+The 30 June area differs from the NRSC figure (597.32\,\kmsq, also given in the source's discussion) by 0.5\% and lies
+inside the spread of the classifiers tested by \cite{irukumati} (Table~\ref{tab:pub}). On 18 June our estimate is about
+22\% higher than NRSC. The NRSC value lies \SI{9.9}{\kmsq} below the range obtained over common threshold choices
+(\SIrange{423}{575}{\kmsq}, joint sweep) but inside the wider one-at-a-time VH-drop sweep (\SIrange{358}{574}{\kmsq});
+for example, a $-5$ dB drop threshold gives \SI{411}{\kmsq}. Matching NRSC on that date would therefore need a stricter
+setting than the common range. The rapid-mapping
 proxy products (\SIrange{128}{144}{\kmsq}) are much smaller than both NRSC's figures and ours, which suggests that they
 were deliberately conservative.
 
@@ -555,8 +571,9 @@ which was valuable after the loss of Sentinel-1B.
 \paragraph{What the maps include and miss.} The change-detection maps are more inclusive than the rapid-mapping
 products. Commission is concentrated in cropland and historically wet land, where flooded paddy fields, waterlogged
 fields after heavy rain and seasonal wetlands all darken in the same way as flood water; a dry-season baseline cannot
-separate them, and late June is the start of the sali rice transplanting season. Omission is concentrated under trees
-and among buildings, where C-band backscatter does not drop. Rural settlements in Nagaon are often villages under
+separate them, and late June is the start of the sali rice transplanting season. Omission relative to ALOS-2 is
+concentrated under trees, which is consistent with C-band backscatter not dropping beneath canopy (and among
+buildings), although the scene dates and methods also differ. Rural settlements in Nagaon are often villages under
 homestead trees, which WorldCover classifies as tree cover rather than built-up, so both the flood maps and the
 exposure estimate are likely to understate flooding in and around villages.
 
@@ -574,7 +591,8 @@ than reporting a single number.
 \item C-band SAR misses flooding beneath vegetation and among buildings; exposure is a proximity indicator and a likely lower bound for settlements under tree cover.
 \item Flooded paddy and seasonal wetlands may be counted as flood; the dry-season baseline cannot distinguish them.
 \item Track 41 does not observe the eastern tip of Kaliabor; cross-track comparisons use the common footprint.
-\item The reference products are rapid-mapping outputs with unknown accuracy and differ in date (ALOS-2 on 22 June lies between our 18 and 28 June scenes); NRSC/ASDMA GIS layers were not publicly available.
+\item The reference products are rapid-mapping outputs with unknown accuracy and differ in date (ALOS-2 on 22 June lies between our 18 and 28 June scenes); their assessed footprints are unknown, so agreement scores assume full district coverage; NRSC/ASDMA GIS layers were not publicly available.
+\item The permanent-water mask and its sensitivity test use JRC's 2021 seasonality; land that was wet in earlier years but not in 2021 is not excluded.
 \item WorldCover built-up includes roads; built-up clusters are not villages; 2011-census sub-districts are used as reporting units and do not exactly match current revenue circles.
 \end{itemize}
 
